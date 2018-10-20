@@ -13,12 +13,12 @@ if __name__=='__main__':
     with tf.Session() as sess:
         vae = VAE(sess=sess,
                   model_dir="/home/kevin/models/vae",
-                  batch_size=32,
+                  batch_size=64,
                   learning_rate=0.0001,
                   width=28,
                   height=28,
                   cdim=1,
-                  n_z=8)
+                  n_z=64)
 
         # Build graph
         vae.model_fn()
@@ -27,7 +27,7 @@ if __name__=='__main__':
         mnist = input_data.read_data_sets('MNIST_data')
 
         # Training
-        vae.train(data=mnist, num_epochs=100)
+        vae.train(data=mnist, num_epochs=2000)
 
         # Generate images
         images = vae.generate()

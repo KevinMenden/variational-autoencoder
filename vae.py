@@ -33,7 +33,7 @@ class VAE(object):
         :param n_z: dimensionality of z
         :return: mu and sigma
         """
-        activation = tf.nn.relu
+        activation = tf.nn.leaky_relu
         with tf.variable_scope("encoder", reuse=reuse):
             enc = tf.reshape(x, shape=[-1, self.width, self.height, self.cdim])
 
@@ -58,7 +58,7 @@ class VAE(object):
         :param z: latent layer z
         :return:
         """
-        activation=tf.nn.relu
+        activation=tf.nn.leaky_relu
         magic = 24
         with tf.variable_scope("decoder", reuse=reuse):
             # Dense layers
@@ -83,11 +83,9 @@ class VAE(object):
         """
         logits_flat = tf.reshape(logits, [-1, self.width*self.height])
         targets_flat = tf.reshape(targets, [-1, self.width*self.height])
-        recon_loss = -tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
-        recon_loss = -tf.reduce_sum(targets_flat * tf.log(logits_flat) + (1 - targets_flat) * tf.log(1 - logits_flat))
-        kl_div = 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(tf.square(sigma)) -1,1)
-
-        loss = tf.reduce_mean(recon_loss + kl_div)
+        img_loss = tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
+        latent_loss = -0.5 * tf.reduce_sum(1.0 + 2.0 * sigma - tf.square(mu) - tf.exp(2.0 * sigma), 1)
+        loss = tf.reduce_mean(img_loss + latent_loss)
         return loss
 
     def model_fn(self):
@@ -139,12 +137,12 @@ class VAE(object):
         print("Training finished.")
 
 
-    def generate(self, num_images=32):
+    def generate(self):
         """
         Generate a sample image
         :return:
         """
-        z_sample = np.random.normal(0, 1,[num_images, self.n_z])
+        z_sample = np.random.normal(0, 1,[self.batch_size, self.n_z])
         gen_images = self.sess.run(self.gen_img, feed_dict={self.z: z_sample})
         return gen_images
 
