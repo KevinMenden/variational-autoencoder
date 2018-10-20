@@ -81,10 +81,12 @@ class VAE(object):
         :param targets: labels
         :return: loss
         """
-        logits_reshaped = tf.reshape(logits, [-1, self.width*self.height])
-        targets_reshaped = tf.reshape(targets, [-1, self.width*self.height])
-        recon_loss = tf.reduce_sum(tf.squared_difference(logits_reshaped, targets_reshaped), 1)
-        kl_div = -0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(1e-8 + tf.square(sigma)) -1, [1])
+        logits_flat = tf.reshape(logits, [-1, self.width*self.height])
+        targets_flat = tf.reshape(targets, [-1, self.width*self.height])
+        recon_loss = -tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
+        recon_loss = -tf.reduce_sum(targets_flat * tf.log(logits_flat) + (1 - targets_flat) * tf.log(1 - logits_flat))
+        kl_div = 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(tf.square(sigma)) -1,1)
+
         loss = tf.reduce_mean(recon_loss + kl_div)
         return loss
 
@@ -94,7 +96,7 @@ class VAE(object):
         """
         # Define placeholders for input and z
         self.inputs = tf.placeholder(tf.float32, [self.batch_size] + [self.height, self.width, self.cdim], name="input_img")
-        #self.z = tf.placeholder(tf.float32, [self.batch_size, self.n_z])
+        self.z = tf.placeholder(tf.float32, [self.batch_size, self.n_z])
 
         # Encoding and sampling
         z, mu, sigma = self.encoder(self.inputs, reuse=False)
@@ -106,6 +108,9 @@ class VAE(object):
 
         # Optimizer
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+
+        # Generated image
+        self.gen_img = self.decoder(self.z, reuse=True)
 
 
     def train(self, data=None, num_epochs=100):
@@ -132,6 +137,18 @@ class VAE(object):
 
         self.saver.save(self.sess, model)
         print("Training finished.")
+
+
+    def generate(self, num_images=32):
+        """
+        Generate a sample image
+        :return:
+        """
+        z_sample = np.random.normal(0, 1,[num_images, self.n_z])
+        gen_images = self.sess.run(self.gen_img, feed_dict={self.z: z_sample})
+        return gen_images
+
+
 
 
 
