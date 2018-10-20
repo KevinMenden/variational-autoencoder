@@ -22,16 +22,24 @@ class VAE(object):
 
 
 
-    def encoder(self, x, n_z):
+    def encoder(self, x, n_z, width=28, height=28):
         """
         Encoder function
         :param x: input data
         :param n_z: dimensionality of z
         :return: mu and sigma
         """
+        activation = tf.nn.relu
         with tf.variable_scope("encoder", reuse=None):
-            enc = tf.layers.dense(x, units=256, activation=tf.nn.relu, name="enc1")
-            enc = tf.layers.dense(enc, units=128, activation=tf.nn.relu, name="enc2")
+            enc = tf.reshape(x, shape=[-1, width, height, 1])
+
+            # Conv layers
+            enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv1")
+            enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv2")
+            enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv3")
+            enc = tf.reshape(enc, [self.batch_size, -1])
+
+            # Out layers
             mu = tf.layers.dense(enc, units=n_z, activation=None, name="enc_mu")
             sigma = tf.layers.dense(enc, units=n_z, activation=None, name="enc_sigma")
             epsilon = tf.random_normal(tf.stack([tf.shape(x)[0], n_z]))
@@ -40,18 +48,23 @@ class VAE(object):
             return z, mu, sigma
 
 
-    def decoder(self, z):
+    def decoder(self, z, width=28, height=28):
         """
         Decoder function
         :param z: latent layer z
         :return:
         """
-
+        activation=tf.nn.relu
         with tf.variable_scope("decoder", reuse=None):
-            dec = tf.layers.dense(z, units=256, activation=tf.nn.relu, name="dec1")
-            dec = tf.layers.dense(dec, units=128, activation=tf.nn.relu, name="dec2")
-            res = tf.layers.dense(dec, units=64, activation=None, name="out_layer")
-            return res
+            dec = tf.layers.dense(z, units=256, activation=tf.nn.relu, name="dec_dense1")
+            dec = tf.layers.dense(dec, units=128, activation=tf.nn.relu, name="dec_dense2")
+            dec = tf.reshape(dec, [-1, 7, 7, 1])
+            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="dec_conv1")
+            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="dec_conv2")
+            dec = tf.reshape(dec, [self.batch_size, -1])
+            dec = tf.layers.dense(dec, units=width*height, activation=tf.nn.sigmoid)
+            img = tf.reshape(dec, shape=[-1, width, height])
+            return img
 
     def compute_loss(self, logits, targets, mu, sigma):
         """
