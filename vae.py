@@ -12,7 +12,8 @@ class VAE(object):
     Variational Autoencoder object
     """
 
-    def __init__(self, sess, model_dir, batch_size, learning_rate, width, height, cdim, n_z, model_name='vae_model'):
+    def __init__(self, sess, model_dir, batch_size, learning_rate,
+                 width=28, height=28, cdim=1, n_z=64, model_name='vae_model'):
         self.sess=sess
         self.model_dir=model_dir
         self.batch_size=batch_size
@@ -88,7 +89,7 @@ class VAE(object):
         loss = tf.reduce_mean(img_loss + latent_loss)
         return loss
 
-    def model_fn(self):
+    def model_fn(self, reuse=False):
         """
         Build the model graph
         """
@@ -97,9 +98,9 @@ class VAE(object):
         self.z = tf.placeholder(tf.float32, [self.batch_size, self.n_z])
 
         # Encoding and sampling
-        z, mu, sigma = self.encoder(self.inputs, reuse=False)
+        z, mu, sigma = self.encoder(self.inputs, reuse=reuse)
         # Decoding
-        self.out = self.decoder(z, reuse=False)
+        self.out = self.decoder(z, reuse=reuse)
 
         # Loss
         self.loss = self.compute_loss(logits=self.out, targets=self.inputs, mu=mu, sigma=sigma)
@@ -122,6 +123,9 @@ class VAE(object):
         tf.summary.scalar("loss", self.loss)
         merged_summary_op = tf.summary.merge_all()
 
+        # Load weights if already trained
+        self.load_weights(self.model_dir)
+
         # Training loop
         for epoch in range(num_epochs):
             batch = [np.reshape(b, [self.width, self.height, self.cdim]) for b in data.train.next_batch(batch_size=self.batch_size)[0]]
@@ -134,6 +138,8 @@ class VAE(object):
                 print("Step: {}, loss: {:.5f}".format(epoch, loss))
 
         self.saver.save(self.sess, model)
+        # Save the model
+
         print("Training finished.")
 
 
@@ -146,10 +152,12 @@ class VAE(object):
         gen_images = self.sess.run(self.gen_img, feed_dict={self.z: z_sample})
         return gen_images
 
-
-
-
-
-
-
-
+    def load_weights(self, model):
+        """
+        Load weights
+        :return:
+        """
+        ckpt = tf.train.get_checkpoint_state(model)
+        if ckpt:
+            self.saver.restore(self.sess, ckpt.model_checkpoint_path)
+            print("Model parameters restored")

@@ -27,10 +27,6 @@ if __name__=='__main__':
         mnist = input_data.read_data_sets('MNIST_data')
 
         # Training
-        vae.train(data=mnist, num_epochs=2000)
+        vae.train(data=mnist, num_epochs=100)
 
-        # Generate images
-        images = vae.generate()
-        outdir = "/home/kevin/test/"
-        for i in range(images.shape[0]):
-            io.imwrite(outdir + 'image_' + str(i) + '.jpg', images[i])
+
