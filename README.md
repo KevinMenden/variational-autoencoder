@@ -5,8 +5,8 @@ Currently the model is in testing phase and runs only on the MNIST dataset.
 In the future, the model will be expanded and optimized for larger and more complicated images.
 
 Much inspiration for the code was taken from:
-*[tensorflow-generative-model-collection](https://github.com/hwalsuklee/tensorflow-generative-model-collections)
-* Felix Mohr's [VAE tutorial](https://github.com/FelixMohr/Deep-learning-with-Python/blob/master/VAE.ipynb)
+* hwalsuklee: [tensorflow-generative-model-collection](https://github.com/hwalsuklee/tensorflow-generative-model-collections)
+* Felix Mohr: [VAE tutorial](https://github.com/FelixMohr/Deep-learning-with-Python/blob/master/VAE.ipynb)
 
 
 

@@ -97,6 +97,9 @@ class VAE(object):
         self.inputs = tf.placeholder(tf.float32, [self.batch_size] + [self.height, self.width, self.cdim], name="input_img")
         self.z = tf.placeholder(tf.float32, [self.batch_size, self.n_z])
 
+        # Gloabl step
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
+
         # Encoding and sampling
         z, mu, sigma = self.encoder(self.inputs, reuse=reuse)
         # Decoding
@@ -106,7 +109,7 @@ class VAE(object):
         self.loss = self.compute_loss(logits=self.out, targets=self.inputs, mu=mu, sigma=sigma)
 
         # Optimizer
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss, global_step=self.global_step)
 
         # Generated image
         self.gen_img = self.decoder(self.z, reuse=True)
@@ -135,10 +138,11 @@ class VAE(object):
 
             self.writer.add_summary(summary, epoch)
             if epoch % 5 == 0:
-                print("Step: {}, loss: {:.5f}".format(epoch, loss))
+                print("Step: {}, loss: {:.5f}".format(tf.train.global_step(self.sess, self.global_step), loss))
 
-        self.saver.save(self.sess, model)
         # Save the model
+        self.saver.save(self.sess, model, global_step=self.global_step)
+
 
         print("Training finished.")
 

@@ -2,31 +2,23 @@
 Main funtion
 """
 
-import tensorflow as tf
-from vae import VAE
-from tensorflow.examples.tutorials.mnist import input_data
-import imageio as io
-
+from functions import *
 
 if __name__=='__main__':
 
-    with tf.Session() as sess:
-        vae = VAE(sess=sess,
-                  model_dir="/home/kevin/models/vae",
-                  batch_size=64,
-                  learning_rate=0.0001,
-                  width=28,
-                  height=28,
-                  cdim=1,
-                  n_z=64)
 
-        # Build graph
-        vae.model_fn()
+    model_dir = "/home/kevin/models/vae"
 
-        # Get Dataset
-        mnist = input_data.read_data_sets('MNIST_data')
+    # model training
+    train_model(model_dir=model_dir,
+                num_steps=1000,
+                learning_rate=0.0005,
+                batch_size=64)
 
-        # Training
-        vae.train(data=mnist, num_epochs=100)
+    # image generation
+    #generate_images(model_dir="/home/kevin/models/vae",
+     #               num_images=10,
+     #               out_dir="/home/kevin/test/")
+
 
 
