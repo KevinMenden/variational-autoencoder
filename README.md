@@ -6,7 +6,7 @@ In the future, the model will be expanded and optimized for larger and more comp
 
 The current numbers were created after ~ 18,000 training steps:
 
-![numbers](mist/combined_numbers.png)
+![numbers](misc/combined_numbers.png)
 
 Much inspiration for the code was taken from:
 
