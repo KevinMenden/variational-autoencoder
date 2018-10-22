@@ -4,7 +4,7 @@ Implementation of a variational autoencoder model for image generation.
 Currently the model is in testing phase and runs only on the MNIST dataset.
 In the future, the model will be expanded and optimized for larger and more complicated images.
 
-The current numbers were created after ~ 18,000 training steps:
+The following numbers were created after ~ 18,000 training steps:
 
 ![numbers](misc/combined_numbers.png)
 
