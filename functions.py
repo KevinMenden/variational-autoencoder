@@ -27,7 +27,7 @@ def generate_images(model_dir, num_images, out_dir="/home/kevin/test/"):
             io.imwrite(out_dir + 'image_' + str(i) + '.jpg', images[i])
 
 
-def train_model(model_dir, num_steps, batch_size=64, learning_rate=0.0001):
+def train_model_mnist(model_dir, num_steps, batch_size=64, learning_rate=0.0001):
     """
     Train a VAE model
     :param model_dir: model directory
@@ -49,6 +49,45 @@ def train_model(model_dir, num_steps, batch_size=64, learning_rate=0.0001):
         mnist = input_data.read_data_sets('MNIST_data')
         # Training
         vae.train(data=mnist, num_epochs=num_steps)
+
+def train_model(model_dir, data, num_steps, batch_size=64, learning_rate=0.0005):
+    """
+    Train a VAE model
+    :param model_dir:
+    :param num_steps:
+    :param batch_size:
+    :param learning_rate:
+    :return:
+    """
+    print(1)
+
+
+def load_cifar_data(cifar_path="/home/kevin/deep_learning/cifar-10-python/cifar-10-batches-py/", batch_size=64):
+    """
+    Load data from the CIFAR dataset and return as Dataset object
+    :param cifar_path:
+    :return: Dataset object
+    """
+    import pickle
+    import numpy as np
+
+    def unpickle(file):
+        with open(file, 'rb') as fo:
+            dict = pickle.load(fo, encoding='bytes')
+        return dict
+
+    batches = []
+    for i in range(1, 6):
+        dict = unpickle(cifar_path + "data_batch_" + str(i))
+        batches.append(np.asarray(dict[b'data']).astype("uint8"))
+    X = np.concatenate(batches)
+    X = np.asarray([np.reshape(b, [32, 32, 3]) for b in X])
+
+    data = tf.data.Dataset.from_tensor_slices(X)
+    data = data.shuffle(1000).repeat().batch(batch_size=batch_size)
+    return data
+
+
 
 
 

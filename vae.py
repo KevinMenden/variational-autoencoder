@@ -4,8 +4,7 @@ Variational Auto-encoder
 
 import tensorflow as tf
 import numpy as np
-
-
+from functions import *
 
 class VAE(object):
     """
@@ -13,7 +12,7 @@ class VAE(object):
     """
 
     def __init__(self, sess, model_dir, batch_size, learning_rate,
-                 width=28, height=28, cdim=1, n_z=64, model_name='vae_model'):
+                 width=32, height=32, cdim=3, n_z=64, model_name='vae_model'):
         self.sess=sess
         self.model_dir=model_dir
         self.batch_size=batch_size
@@ -94,11 +93,18 @@ class VAE(object):
         Build the model graph
         """
         # Define placeholders for input and z
-        self.inputs = tf.placeholder(tf.float32, [self.batch_size] + [self.height, self.width, self.cdim], name="input_img")
+        #self.inputs = tf.placeholder(tf.float32, [self.batch_size] + [self.height, self.width, self.cdim], name="input_img")
         self.z = tf.placeholder(tf.float32, [self.batch_size, self.n_z])
 
         # Gloabl step
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
+
+        # Load dataset
+        self.data = load_cifar_data(batch_size=self.batch_size)
+        iter = tf.data.Iterator.from_structure(self.data.output_types, self.inputs.output_shapes)
+        next_element = iter.get_next()
+        self.training_init_op = iter.make_initializer(self.data)
+        self.inputs = next_element
 
         # Encoding and sampling
         z, mu, sigma = self.encoder(self.inputs, reuse=reuse)
@@ -130,14 +136,13 @@ class VAE(object):
         self.load_weights(self.model_dir)
 
         # Training loop
-        for epoch in range(num_epochs):
-            batch = [np.reshape(b, [self.width, self.height, self.cdim]) for b in data.train.next_batch(batch_size=self.batch_size)[0]]
+        for step in range(num_epochs):
+            #batch = [np.reshape(b, [self.width, self.height, self.cdim]) for b in data.train.next_batch(batch_size=self.batch_size)[0]]
 
-            _, loss, summary = self.sess.run([self.optimizer, self.loss, merged_summary_op],
-                                             feed_dict={self.inputs: batch})
+            _, loss, summary = self.sess.run([self.optimizer, self.loss, merged_summary_op])
 
             self.writer.add_summary(summary, tf.train.global_step(self.sess, self.global_step))
-            if epoch % 5 == 0:
+            if step % 5 == 0:
                 print("Step: {}, loss: {:.5f}".format(tf.train.global_step(self.sess, self.global_step), loss))
 
         # Save the model

@@ -16,6 +16,7 @@ if __name__=='__main__':
     parser.add_argument("--learning_rate", type=float, help="Learning rate. Default: 0.0001", default=0.0001)
     parser.add_argument("--batch_size", type=int, help="Batch size. Default: 64", default=64)
     parser.add_argument("--out", type=str, help="Directory for string results", default="./")
+
     # Parse arguments
     args = parser.parse_args()
     mode = args.mode
