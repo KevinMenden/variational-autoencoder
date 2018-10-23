@@ -8,7 +8,10 @@ The following numbers were created after ~ 18,000 training steps:
 
 ![numbers](misc/combined_numbers.png)
 
+
 After 50,000 steps:
+
+
 ![num50k](misc/numbers_50k.png)
 
 Much inspiration for the code was taken from:
