@@ -4,7 +4,34 @@ Variational Auto-encoder
 
 import tensorflow as tf
 import numpy as np
-from functions import *
+
+# delete later
+
+def load_cifar_data(cifar_path="/home/kevin/deep_learning/cifar-10-python/cifar-10-batches-py/", batch_size=64):
+    """
+    Load data from the CIFAR dataset and return as Dataset object
+    :param cifar_path:
+    :return: Dataset object
+    """
+    import pickle
+    import numpy as np
+
+    def unpickle(file):
+        with open(file, 'rb') as fo:
+            dict = pickle.load(fo, encoding='bytes')
+        return dict
+
+    batches = []
+    for i in range(1, 6):
+        dict = unpickle(cifar_path + "data_batch_" + str(i))
+        batches.append(np.asarray(dict[b'data']).astype("float32"))
+    X = np.concatenate(batches)
+    X = np.asarray([np.reshape(b, [32, 32, 3]) for b in X])
+
+    data = tf.data.Dataset.from_tensor_slices(X)
+    data = data.shuffle(1000).repeat().batch(batch_size=batch_size)
+    return data
+
 
 class VAE(object):
     """
@@ -41,7 +68,7 @@ class VAE(object):
             enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv1")
             enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv2")
             enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv3")
-            enc = tf.reshape(enc, [self.batch_size, -1])
+            enc = tf.reshape(enc, [self.batch_size, self.width*self.height*self.cdim])
 
             # Out layers
             mu = tf.layers.dense(enc, units=self.n_z, activation=None, name="enc_mu")
@@ -62,16 +89,20 @@ class VAE(object):
         magic = 24
         with tf.variable_scope("decoder", reuse=reuse):
             # Dense layers
-            dec = tf.layers.dense(z, units=magic, activation=tf.nn.relu, name="dec_dense1")
-            dec = tf.layers.dense(dec, units=magic*2+1, activation=tf.nn.relu, name="dec_dense2")
+            dec = tf.layers.dense(z, units=self.n_z, activation=tf.nn.relu, name="dec_dense1")
+            dec = tf.layers.dense(dec, units=7*7*128, activation=tf.nn.relu, name="dec_dense2")
             # Deconv layers
-            dec = tf.reshape(dec, [-1, 7, 7, self.cdim])
+            dec = tf.reshape(dec, [self.batch_size, 7, 7, 128])
+            print(dec)
             dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="dec_conv1")
-            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="dec_conv2")
-            dec = tf.reshape(dec, [self.batch_size, -1])
+            print(dec)
+            dec = tf.layers.conv2d_transpose(dec, filters=self.cdim, kernel_size=4, strides=2,padding="same", activation=activation, name="dec_conv2")
+            print(dec)
+            dec = tf.reshape(dec, [self.batch_size, self.width*self.height, self.cdim])
+            print(dec)
             # Generate picture
-            dec = tf.layers.dense(dec, units=self.width*self.height, activation=tf.nn.sigmoid)
-            img = tf.reshape(dec, shape=[-1, self.width, self.height])
+            dec = tf.layers.dense(dec, units=self.width*self.height*self.cdim, activation=tf.nn.sigmoid)
+            img = tf.reshape(dec, shape=[self.batch_size, self.width, self.height])
             return img
 
     def compute_loss(self, logits, targets, mu, sigma):
@@ -101,7 +132,7 @@ class VAE(object):
 
         # Load dataset
         self.data = load_cifar_data(batch_size=self.batch_size)
-        iter = tf.data.Iterator.from_structure(self.data.output_types, self.inputs.output_shapes)
+        iter = tf.data.Iterator.from_structure(self.data.output_types, self.data.output_shapes)
         next_element = iter.get_next()
         self.training_init_op = iter.make_initializer(self.data)
         self.inputs = next_element
@@ -121,9 +152,10 @@ class VAE(object):
         self.gen_img = self.decoder(self.z, reuse=True)
 
 
-    def train(self, data=None, num_epochs=100):
+    def train(self, num_epochs=100):
         # Init session
         self.sess.run(tf.global_variables_initializer())
+        self.sess.run(self.training_init_op)
         self.saver = tf.train.Saver()
         model = self.model_dir  + '/' + self.model_name
         self.writer = tf.summary.FileWriter(model, self.sess.graph)

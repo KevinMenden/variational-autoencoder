@@ -50,7 +50,7 @@ def train_model_mnist(model_dir, num_steps, batch_size=64, learning_rate=0.0001)
         # Training
         vae.train(data=mnist, num_epochs=num_steps)
 
-def train_model(model_dir, data, num_steps, batch_size=64, learning_rate=0.0005):
+def train_model_cifar(model_dir, num_steps, batch_size=64, learning_rate=0.0005):
     """
     Train a VAE model
     :param model_dir:
@@ -59,7 +59,18 @@ def train_model(model_dir, data, num_steps, batch_size=64, learning_rate=0.0005)
     :param learning_rate:
     :return:
     """
-    print(1)
+
+    with tf.Session() as sess:
+        vae = VAE(sess=sess,
+                  model_dir=model_dir,
+                  batch_size=batch_size,
+                  learning_rate=learning_rate)
+
+        # Build graph
+        vae.model_fn()
+
+        # Training
+        vae.train(num_epochs=num_steps)
 
 
 def load_cifar_data(cifar_path="/home/kevin/deep_learning/cifar-10-python/cifar-10-batches-py/", batch_size=64):
