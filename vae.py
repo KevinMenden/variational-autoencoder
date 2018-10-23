@@ -136,7 +136,7 @@ class VAE(object):
             _, loss, summary = self.sess.run([self.optimizer, self.loss, merged_summary_op],
                                              feed_dict={self.inputs: batch})
 
-            self.writer.add_summary(summary, epoch)
+            self.writer.add_summary(summary, tf.train.global_step(self.sess, self.global_step))
             if epoch % 5 == 0:
                 print("Step: {}, loss: {:.5f}".format(tf.train.global_step(self.sess, self.global_step), loss))
 
