@@ -18,7 +18,7 @@ if __name__=='__main__':
     mode = args.mode
     model_dir = args.model_dir
     n_images = args.n_img
-    
+
 
 
     # Training mode
