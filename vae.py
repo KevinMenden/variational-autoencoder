@@ -90,16 +90,13 @@ class VAE(object):
         with tf.variable_scope("decoder", reuse=reuse):
             # Dense layers
             dec = tf.layers.dense(z, units=self.n_z, activation=tf.nn.relu, name="dec_dense1")
-            dec = tf.layers.dense(dec, units=7*7*128, activation=tf.nn.relu, name="dec_dense2")
+            dec = tf.layers.dense(dec, units=4*4*128, activation=tf.nn.relu, name="dec_dense2")
             # Deconv layers
-            dec = tf.reshape(dec, [self.batch_size, 7, 7, 128])
-            print(dec)
-            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="dec_conv1")
-            print(dec)
-            dec = tf.layers.conv2d_transpose(dec, filters=self.cdim, kernel_size=4, strides=2,padding="same", activation=activation, name="dec_conv2")
-            print(dec)
+            dec = tf.reshape(dec, [self.batch_size, 4, 4, 128])
+            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv1")
+            dec = tf.layers.conv2d_transpose(dec, filters=32, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv2")
+            dec = tf.layers.conv2d_transpose(dec, filters=self.cdim, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv3")
             dec = tf.reshape(dec, [self.batch_size, self.width*self.height, self.cdim])
-            print(dec)
             # Generate picture
             dec = tf.layers.dense(dec, units=self.width*self.height*self.cdim, activation=tf.nn.sigmoid)
             img = tf.reshape(dec, shape=[self.batch_size, self.width, self.height])
