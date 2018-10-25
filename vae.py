@@ -68,7 +68,7 @@ class VAE(object):
             enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv1")
             enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv2")
             enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv3")
-            enc = tf.reshape(enc, [self.batch_size, self.width*self.height*self.cdim])
+            enc = tf.reshape(enc, [-1, 4*4*64])
 
             # Out layers
             mu = tf.layers.dense(enc, units=self.n_z, activation=None, name="enc_mu")
@@ -96,10 +96,9 @@ class VAE(object):
             dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv1")
             dec = tf.layers.conv2d_transpose(dec, filters=32, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv2")
             dec = tf.layers.conv2d_transpose(dec, filters=self.cdim, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv3")
-            dec = tf.reshape(dec, [self.batch_size, self.width*self.height, self.cdim])
-            # Generate picture
+            dec = tf.contrib.layers.flatten(dec)
             dec = tf.layers.dense(dec, units=self.width*self.height*self.cdim, activation=tf.nn.sigmoid)
-            img = tf.reshape(dec, shape=[self.batch_size, self.width, self.height])
+            img = tf.reshape(dec, shape=[-1, self.width, self.height, self.cdim])
             return img
 
     def compute_loss(self, logits, targets, mu, sigma):
@@ -109,8 +108,8 @@ class VAE(object):
         :param targets: labels
         :return: loss
         """
-        logits_flat = tf.reshape(logits, [-1, self.width*self.height])
-        targets_flat = tf.reshape(targets, [-1, self.width*self.height])
+        logits_flat = tf.reshape(logits, [-1, self.width*self.height*self.cdim])
+        targets_flat = tf.reshape(targets, [-1, self.width*self.height*self.cdim])
         img_loss = tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
         latent_loss = -0.5 * tf.reduce_sum(1.0 + 2.0 * sigma - tf.square(mu) - tf.exp(2.0 * sigma), 1)
         loss = tf.reduce_mean(img_loss + latent_loss)
