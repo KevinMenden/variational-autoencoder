@@ -18,8 +18,13 @@ def generate_images(model_dir, num_images, out_dir="/home/kevin/test/"):
         vae = VAE(sess=sess,
                   model_dir=model_dir,
                   batch_size=num_images,
-                  learning_rate=0.0001)
-        vae.model_fn()
+                  learning_rate=0.0001,
+                  height=28,
+                  width=28,
+                  cdim=1)
+
+        mnist = load_mnist_data(batch_size=num_images)
+        vae.model_fn(data=mnist)
         saver = tf.train.Saver()
         saver.restore(sess, tf.train.latest_checkpoint(model_dir))
         images = vae.generate()
@@ -35,20 +40,23 @@ def train_model_mnist(model_dir, num_steps, batch_size=64, learning_rate=0.0001)
     :param learning_rate: learning rate to use
     :return:
     """
-    from tensorflow.examples.tutorials.mnist import input_data
 
     with tf.Session() as sess:
         vae = VAE(sess=sess,
                   model_dir=model_dir,
                   batch_size=batch_size,
-                  learning_rate=learning_rate)
+                  learning_rate=learning_rate,
+                  height=28,
+                  width=28,
+                  cdim=1)
 
+        # Load data
+        mnist = load_mnist_data(batch_size=batch_size)
         # Build graph
-        vae.model_fn()
-        # Get Dataset
-        mnist = input_data.read_data_sets('MNIST_data')
+        vae.model_fn(data=mnist)
+
         # Training
-        vae.train(data=mnist, num_epochs=num_steps)
+        vae.train(num_epochs=num_steps)
 
 def train_model_cifar(model_dir, num_steps, batch_size=64, learning_rate=0.0005):
     """
@@ -66,8 +74,11 @@ def train_model_cifar(model_dir, num_steps, batch_size=64, learning_rate=0.0005)
                   batch_size=batch_size,
                   learning_rate=learning_rate)
 
+        # Load cifar dataset
+        load_cifar_data(cifar_path="/home/kevin/deep_learning/cifar-10-python/cifar-10-batches-py/", batch_size=batch_size)
+
         # Build graph
-        vae.model_fn()
+        vae.model_fn(data=cifar)
 
         # Training
         vae.train(num_epochs=num_steps)
@@ -97,6 +108,22 @@ def load_cifar_data(cifar_path="/home/kevin/deep_learning/cifar-10-python/cifar-
     data = tf.data.Dataset.from_tensor_slices(X)
     data = data.shuffle(1000).repeat().batch(batch_size=batch_size)
     return data
+
+
+def load_mnist_data(batch_size=64):
+    """
+    Load MNIST data
+    :param batch_size:
+    :return:
+    """
+    from tensorflow.examples.tutorials.mnist import input_data
+    mnist = input_data.read_data_sets('MNIST_data')
+    data = tf.data.Dataset.from_tensor_slices(mnist.train.images)
+    data = data.shuffle(1000).repeat().batch(batch_size=batch_size)
+    return data
+
+
+
 
 
 

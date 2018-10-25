@@ -65,17 +65,16 @@ class VAE(object):
             enc = tf.reshape(x, shape=[-1, self.width, self.height, self.cdim])
 
             # Conv layers
-            enc = tf.layers.conv2d(enc, filters=3, kernel_size=3, strides=1, padding="same", activation=activation, name="enc_conv1")
-            enc = tf.layers.conv2d(enc, filters=32, kernel_size=3, strides=2, padding="same", activation=activation, name="enc_conv2")
-            enc = tf.layers.conv2d(enc, filters=32, kernel_size=3, strides=1, padding="same", activation=activation, name="enc_conv3")
-            enc = tf.layers.conv2d(enc, filters=32, kernel_size=3, strides=1, padding="same", activation=activation, name="enc_conv4")
-            enc = tf.reshape(enc, [-1, 16*16*32])
-            enc = tf.layers.dense(enc, units=128, activation=activation, name="enc_dense")
+            enc = tf.layers.conv2d(enc, filters=32, kernel_size=5, strides=2, padding="same", activation=activation, name="enc_conv1")
+            enc = tf.layers.conv2d(enc, filters=32, kernel_size=5, strides=2, padding="same", activation=activation, name="enc_conv2")
+            enc = tf.layers.conv2d(enc, filters=16, kernel_size=5, strides=1, padding="same", activation=activation, name="enc_conv3")
+            enc = tf.reshape(enc, [self.batch_size, 7*7*16])
+            enc = tf.layers.dense(enc, units=64, activation=activation, name="enc_dense")
 
             # Out layers
             mu = tf.layers.dense(enc, units=self.n_z, activation=None, name="enc_mu")
             sigma = tf.layers.dense(enc, units=self.n_z, activation=None, name="enc_sigma")
-            epsilon = tf.random_normal(tf.stack([tf.shape(x)[0], self.n_z]))
+            epsilon = tf.random_normal(tf.stack([self.batch_size, self.n_z]))
             z = mu + tf.multiply(epsilon, tf.exp(0.5*sigma))
 
             return z, mu, sigma
@@ -88,19 +87,18 @@ class VAE(object):
         :return:
         """
         activation=tf.nn.leaky_relu
-        magic = 24
         with tf.variable_scope("decoder", reuse=reuse):
             # Dense layers
-            dec = tf.layers.dense(z, units=self.n_z, activation=tf.nn.relu, name="dec_dense1")
-            dec = tf.layers.dense(dec, units=4*4*128, activation=tf.nn.relu, name="dec_dense2")
+            dec = tf.layers.dense(z, units=512, activation=tf.nn.relu, name="dec_dense1")
+            dec = tf.layers.dense(dec, units=1024, activation=tf.nn.relu, name="dec_dense2")
             # Deconv layers
-            dec = tf.reshape(dec, [self.batch_size, 4, 4, 128])
+            dec = tf.reshape(dec, [self.batch_size, 8, 8, 16])
             dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv1")
-            dec = tf.layers.conv2d_transpose(dec, filters=32, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv2")
-            dec = tf.layers.conv2d_transpose(dec, filters=self.cdim, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv3")
-            dec = tf.contrib.layers.flatten(dec)
-            dec = tf.layers.dense(dec, units=self.width*self.height*self.cdim, activation=tf.nn.sigmoid)
-            img = tf.reshape(dec, shape=[-1, self.width, self.height, self.cdim])
+            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv2")
+            dec = tf.layers.conv2d_transpose(dec, filters=16, kernel_size=3, strides=1,padding="same", activation=activation, name="dec_conv3")
+            dec = tf.reshape(dec, [self.batch_size, 32*32*16])
+            dec = tf.layers.dense(dec, units=self.height*self.width*self.cdim, activation=tf.nn.sigmoid)
+            img = tf.reshape(dec, shape=[self.batch_size, self.height, self.width, self.cdim])
             return img
 
     def compute_loss(self, logits, targets, mu, sigma):
@@ -110,27 +108,26 @@ class VAE(object):
         :param targets: labels
         :return: loss
         """
-        logits_flat = tf.reshape(logits, [-1, self.width*self.height*self.cdim])
-        targets_flat = tf.reshape(targets, [-1, self.width*self.height*self.cdim])
+        logits_flat = tf.contrib.layers.flatten(logits)
+        targets_flat = tf.contrib.layers.flatten(targets)
         img_loss = tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
+        #latent_loss = - 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(tf.square(sigma)) - 1,1)
         latent_loss = -0.5 * tf.reduce_sum(1.0 + 2.0 * sigma - tf.square(mu) - tf.exp(2.0 * sigma), 1)
-        #loss = tf.reduce_mean(img_loss + latent_loss)
-        loss = tf.reduce_mean(img_loss)
+        loss = tf.reduce_mean(img_loss + latent_loss)
         return loss
 
-    def model_fn(self, reuse=False):
+    def model_fn(self, data, reuse=False):
         """
         Build the model graph
         """
         # Define placeholders for input and z
-        #self.inputs = tf.placeholder(tf.float32, [self.batch_size] + [self.height, self.width, self.cdim], name="input_img")
         self.z = tf.placeholder(tf.float32, [self.batch_size, self.n_z])
 
         # Gloabl step
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
-        # Load dataset
-        self.data = load_cifar_data(batch_size=self.batch_size)
+        # Create data ops
+        self.data = data
         iter = tf.data.Iterator.from_structure(self.data.output_types, self.data.output_shapes)
         next_element = iter.get_next()
         self.training_init_op = iter.make_initializer(self.data)
