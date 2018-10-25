@@ -65,10 +65,12 @@ class VAE(object):
             enc = tf.reshape(x, shape=[-1, self.width, self.height, self.cdim])
 
             # Conv layers
-            enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv1")
-            enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv2")
-            enc = tf.layers.conv2d(enc, filters=64, kernel_size=4, strides=2, padding="same", activation=activation, name="enc_conv3")
-            enc = tf.reshape(enc, [-1, 4*4*64])
+            enc = tf.layers.conv2d(enc, filters=3, kernel_size=3, strides=1, padding="same", activation=activation, name="enc_conv1")
+            enc = tf.layers.conv2d(enc, filters=32, kernel_size=3, strides=2, padding="same", activation=activation, name="enc_conv2")
+            enc = tf.layers.conv2d(enc, filters=32, kernel_size=3, strides=1, padding="same", activation=activation, name="enc_conv3")
+            enc = tf.layers.conv2d(enc, filters=32, kernel_size=3, strides=1, padding="same", activation=activation, name="enc_conv4")
+            enc = tf.reshape(enc, [-1, 16*16*32])
+            enc = tf.layers.dense(enc, units=128, activation=activation, name="enc_dense")
 
             # Out layers
             mu = tf.layers.dense(enc, units=self.n_z, activation=None, name="enc_mu")
@@ -112,7 +114,8 @@ class VAE(object):
         targets_flat = tf.reshape(targets, [-1, self.width*self.height*self.cdim])
         img_loss = tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
         latent_loss = -0.5 * tf.reduce_sum(1.0 + 2.0 * sigma - tf.square(mu) - tf.exp(2.0 * sigma), 1)
-        loss = tf.reduce_mean(img_loss + latent_loss)
+        #loss = tf.reduce_mean(img_loss + latent_loss)
+        loss = tf.reduce_mean(img_loss)
         return loss
 
     def model_fn(self, reuse=False):
