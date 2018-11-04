@@ -32,6 +32,37 @@ def generate_images(model_dir, num_images, out_dir="/home/kevin/test/"):
             io.imwrite(out_dir + 'image_' + str(i) + '.jpg', images[i])
 
 
+def load_atlas_data(data_path):
+    x, y = 0, 0
+
+    return x, y
+
+def train_model_atlas(model_dir, num_steps, batch_size=64, learning_rate=0.0005):
+    """
+    Train a VAE model on the protein atlas image data
+    :param model_dir:
+    :param num_steps:
+    :param batch_size:
+    :param learning_rate:
+    :return:
+    """
+    with tf.Session() as sess:
+        vae = VAE(sess=sess,
+                  model_dir=model_dir,
+                  batch_size=batch_size,
+                  learning_rate=learning_rate,
+                  height=256,
+                  width=256,
+                  cdim=3)
+
+        # Load data
+        data = load_atlas_data("")
+
+        # Start training
+        vae.train(data=data, num_epochs=num_steps)
+
+
+
 def train_model_mnist(model_dir, num_steps, batch_size=64, learning_rate=0.0001):
     """
     Train a VAE model
@@ -56,7 +87,7 @@ def train_model_mnist(model_dir, num_steps, batch_size=64, learning_rate=0.0001)
         vae.model_fn(data=mnist)
 
         # Training
-        vae.train(num_epochs=num_steps)
+        vae.train(data="placeholder", num_epochs=num_steps)
 
 def train_model_cifar(model_dir, num_steps, batch_size=64, learning_rate=0.0005):
     """

@@ -134,9 +134,9 @@ class VAE(object):
         self.inputs = next_element
 
         # Encoding and sampling
-        z, mu, sigma = self.encoder(self.inputs, reuse=reuse)
+        self.z, mu, sigma = self.encoder(self.inputs, reuse=reuse)
         # Decoding
-        self.out = self.decoder(z, reuse=reuse)
+        self.out = self.decoder(self.z, reuse=reuse)
 
         # Loss
         self.loss = self.compute_loss(logits=self.out, targets=self.inputs, mu=mu, sigma=sigma)
@@ -148,7 +148,10 @@ class VAE(object):
         self.gen_img = self.decoder(self.z, reuse=True)
 
 
-    def train(self, num_epochs=100):
+    def train(self, data, num_epochs=100):
+
+        # Build the graph
+        #self.model_fn(data=data)
         # Init session
         self.sess.run(tf.global_variables_initializer())
         self.sess.run(self.training_init_op)
@@ -158,6 +161,7 @@ class VAE(object):
 
         # Summary scalars
         tf.summary.scalar("loss", self.loss)
+        tf.summary.image("image", self.gen_img)
         merged_summary_op = tf.summary.merge_all()
 
         # Load weights if already trained
