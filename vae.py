@@ -161,7 +161,7 @@ class VAE(object):
 
         # Summary scalars
         tf.summary.scalar("loss", self.loss)
-        tf.summary.image("image", self.gen_img)
+        tf.summary.image("image", self.gen_img, max_outputs=12)
         merged_summary_op = tf.summary.merge_all()
 
         # Load weights if already trained
