@@ -5,34 +5,6 @@ Variational Auto-encoder
 import tensorflow as tf
 import numpy as np
 
-# delete later
-
-def load_cifar_data(cifar_path="/home/kevin/deep_learning/cifar-10-python/cifar-10-batches-py/", batch_size=64):
-    """
-    Load data from the CIFAR dataset and return as Dataset object
-    :param cifar_path:
-    :return: Dataset object
-    """
-    import pickle
-    import numpy as np
-
-    def unpickle(file):
-        with open(file, 'rb') as fo:
-            dict = pickle.load(fo, encoding='bytes')
-        return dict
-
-    batches = []
-    for i in range(1, 6):
-        dict = unpickle(cifar_path + "data_batch_" + str(i))
-        batches.append(np.asarray(dict[b'data']).astype("float32"))
-    X = np.concatenate(batches)
-    X = np.asarray([np.reshape(b, [32, 32, 3]) for b in X])
-
-    data = tf.data.Dataset.from_tensor_slices(X)
-    data = data.shuffle(1000).repeat().batch(batch_size=batch_size)
-    return data
-
-
 class VAE(object):
     """
     Variational Autoencoder object
@@ -68,8 +40,8 @@ class VAE(object):
             enc = tf.layers.conv2d(enc, filters=32, kernel_size=5, strides=2, padding="same", activation=activation, name="enc_conv1")
             enc = tf.layers.conv2d(enc, filters=32, kernel_size=5, strides=2, padding="same", activation=activation, name="enc_conv2")
             enc = tf.layers.conv2d(enc, filters=16, kernel_size=5, strides=1, padding="same", activation=activation, name="enc_conv3")
-            enc = tf.reshape(enc, [self.batch_size, 7*7*16])
-            enc = tf.layers.dense(enc, units=64, activation=activation, name="enc_dense")
+            enc = tf.reshape(enc, [self.batch_size, 32*32*16])
+            enc = tf.layers.dense(enc, units=self.n_z, activation=activation, name="enc_dense")
 
             # Out layers
             mu = tf.layers.dense(enc, units=self.n_z, activation=None, name="enc_mu")
@@ -91,15 +63,13 @@ class VAE(object):
             # Dense layers
             dec = tf.layers.dense(z, units=512, activation=tf.nn.relu, name="dec_dense1")
             dec = tf.layers.dense(dec, units=1024, activation=tf.nn.relu, name="dec_dense2")
+            dec = tf.layers.dense(dec, units=2048, activation=tf.nn.relu, name="dec_dense3")
             # Deconv layers
-            dec = tf.reshape(dec, [self.batch_size, 8, 8, 16])
+            dec = tf.reshape(dec, [self.batch_size, 16, 16, 8])
             dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv1")
-            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv2")
-            dec = tf.layers.conv2d_transpose(dec, filters=16, kernel_size=3, strides=1,padding="same", activation=activation, name="dec_conv3")
-            dec = tf.reshape(dec, [self.batch_size, 32*32*16])
-            dec = tf.layers.dense(dec, units=self.height*self.width*self.cdim, activation=tf.nn.sigmoid)
-            img = tf.reshape(dec, shape=[self.batch_size, self.height, self.width, self.cdim])
-            return img
+            dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv2")
+            dec = tf.layers.conv2d_transpose(dec, filters=3, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv3")
+            return dec
 
     def compute_loss(self, logits, targets, mu, sigma):
         """
@@ -110,10 +80,11 @@ class VAE(object):
         """
         logits_flat = tf.contrib.layers.flatten(logits)
         targets_flat = tf.contrib.layers.flatten(targets)
-        img_loss = tf.reduce_sum(tf.squared_difference(logits_flat, targets_flat), 1)
-        #latent_loss = - 0.5 * tf.reduce_sum(tf.square(mu) + tf.square(sigma) - tf.log(tf.square(sigma)) - 1,1)
-        latent_loss = -0.5 * tf.reduce_sum(1.0 + 2.0 * sigma - tf.square(mu) - tf.exp(2.0 * sigma), 1)
-        loss = tf.reduce_mean(img_loss + latent_loss)
+        encode_decode_loss = targets_flat * tf.log(1e-10 + logits_flat) + (1 - targets_flat) * tf.log(1e-10 + 1 - logits_flat)
+        encode_decode_loss = -tf.reduce_sum(encode_decode_loss, 1)
+        latent_loss = 1 + sigma - tf.square(mu) - tf.exp(sigma)
+        latent_loss = -0.5 * tf.reduce_sum(latent_loss, 1)
+        loss = tf.reduce_mean(encode_decode_loss + latent_loss)
         return loss
 
     def model_fn(self, data, reuse=False):
@@ -151,7 +122,7 @@ class VAE(object):
     def train(self, data, num_epochs=100):
 
         # Build the graph
-        #self.model_fn(data=data)
+        self.model_fn(data=data)
         # Init session
         self.sess.run(tf.global_variables_initializer())
         self.sess.run(self.training_init_op)
@@ -161,7 +132,8 @@ class VAE(object):
 
         # Summary scalars
         tf.summary.scalar("loss", self.loss)
-        tf.summary.image("image", self.gen_img, max_outputs=12)
+        tf.summary.image("image_gen", self.gen_img, max_outputs=1)
+        tf.summary.image("image_ori", self.inputs, max_outputs=1)
         merged_summary_op = tf.summary.merge_all()
 
         # Load weights if already trained

@@ -3,7 +3,7 @@ Main funtion
 """
 
 import argparse
-from functions import *
+from functions.functions import *
 
 if __name__=='__main__':
 
@@ -27,7 +27,11 @@ if __name__=='__main__':
     batch_size = args.batch_size
     out_dir = args.out
 
-
+    if mode == "train":
+        train_model_art(model_dir=model_dir,
+                        num_steps=num_steps,
+                        learning_rate=learning_rate,
+                        batch_size=batch_size)
 
     # Training mode
     if mode == "train_cifar":
