@@ -138,7 +138,7 @@ def _parse_function(filename):
     :return:
     """
     img_file = tf.read_file(filename)
-    img = tf.image.decode_jpeg(img_file)
+    img = tf.image.decode_jpeg(img_file, channels=1)
     img = tf.image.resize_images(img, size=(128, 128))
     img = tf.image.convert_image_dtype(img, dtype=tf.float32)
     return img
@@ -178,8 +178,8 @@ def train_model_art(model_dir, num_steps, batch_size=64, learning_rate=0.0005):
                   learning_rate=learning_rate,
                   height=128,
                   width=128,
-                  cdim=3,
-                  n_z=64)
+                  cdim=1,
+                  n_z=128)
 
         # Load cifar dataset
         data = load_art_data(data_path="/home/kevin/deep_learning/cat-dataset/cats/CAT_00", batch_size=batch_size)

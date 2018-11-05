@@ -68,7 +68,7 @@ class VAE(object):
             dec = tf.reshape(dec, [self.batch_size, 16, 16, 8])
             dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv1")
             dec = tf.layers.conv2d_transpose(dec, filters=64, kernel_size=3, strides=2, padding="same", activation=activation, name="dec_conv2")
-            dec = tf.layers.conv2d_transpose(dec, filters=3, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv3")
+            dec = tf.layers.conv2d_transpose(dec, filters=self.cdim, kernel_size=3, strides=2,padding="same", activation=activation, name="dec_conv3")
             return dec
 
     def compute_loss(self, logits, targets, mu, sigma):
@@ -78,13 +78,14 @@ class VAE(object):
         :param targets: labels
         :return: loss
         """
-        logits_flat = tf.contrib.layers.flatten(logits)
-        targets_flat = tf.contrib.layers.flatten(targets)
-        encode_decode_loss = targets_flat * tf.log(1e-10 + logits_flat) + (1 - targets_flat) * tf.log(1e-10 + 1 - logits_flat)
-        encode_decode_loss = -tf.reduce_sum(encode_decode_loss, 1)
+        logits_flat = tf.reshape(logits, [self.batch_size, self.height*self.width*self.cdim])
+        targets_flat = tf.reshape(targets, [self.batch_size, self.height*self.width*self.cdim])
+        #encode_decode_loss = targets_flat * tf.log(1e-10 + logits_flat) + (1 - targets_flat) * tf.log(1e-10 + 1 - logits_flat)
+        #encode_decode_loss = -tf.reduce_sum(encode_decode_loss, 1)
         latent_loss = 1 + sigma - tf.square(mu) - tf.exp(sigma)
-        latent_loss = -0.5 * tf.reduce_sum(latent_loss, 1)
-        loss = tf.reduce_mean(encode_decode_loss + latent_loss)
+        latent_loss = -0.1 * tf.reduce_sum(latent_loss, 1)
+        img_loss = tf.losses.absolute_difference(labels=targets_flat, predictions=logits_flat)
+        loss = tf.reduce_mean(img_loss)
         return loss
 
     def model_fn(self, data, reuse=False):
